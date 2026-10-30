@@ -31,7 +31,7 @@ SECRET_KEY_BASE и три ENCRYPTION_* — независимые случайн
 2. `certbot certonly --webroot -w /var/www/letsencrypt -d forms.osnova-mind.ru` (администратор использует свой контакт и принимает условия провайдера сертификата).
 3. Заменить только созданный vhost на forms.osnova-mind.ru.conf. `nginx -t && systemctl reload nginx`.
 4. Проверить HTTPS /up, /embed.js, certbot renew --dry-run, штатный timer и deploy-hook плавного reload nginx после обновления сертификата. Существующие сертификаты не перевыпускать.
-5. Настроить Telegram-бота и чат для ошибок и проверить уведомление с согласия владельца адресата. До этого форму не включать.
+5. Если прямой доступ к api.telegram.org ограничен, задать ALERT_API_ROOT=https://<адрес-Worker> (без /bot<TOKEN>/sendMessage); ALERT_BOT_TOKEN и ALERT_CHAT_ID задать отдельно в env. Конечный слеш у базового адреса допустим. Настроить Telegram-бота и чат для ошибок и проверить уведомление с согласия владельца адресата. До этого форму не включать.
 
 ## Приёмка и сайт
 
