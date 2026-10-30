@@ -1,0 +1,25 @@
+[Unit]
+Description=OS.NOVA intake API and delivery queue
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=forms
+Group=forms
+WorkingDirectory=/srv/osnova-forms/current
+EnvironmentFile=/etc/osnova-forms/env
+# Administrator: install Ruby 3.4.11 here or adjust PATH to its actual directory.
+Environment=PATH=/opt/ruby/3.4.11/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/ruby/3.4.11/bin/bundle exec puma -C config/puma.rb
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/osnova-forms/shared /srv/osnova-forms/current/tmp /srv/osnova-forms/current/log
+
+[Install]
+WantedBy=multi-user.target

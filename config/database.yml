@@ -1,0 +1,18 @@
+default: &default
+  adapter: sqlite3
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+  timeout: 15000
+development:
+  <<: *default
+  database: storage/development.sqlite3
+test:
+  <<: *default
+  database: storage/test.sqlite3
+production:
+  primary:
+    <<: *default
+    database: <%= ENV.fetch("STORAGE_PATH", "storage") %>/production.sqlite3
+  queue:
+    <<: *default
+    database: <%= ENV.fetch("STORAGE_PATH", "storage") %>/production_queue.sqlite3
+    migrations_paths: db/queue_migrate

@@ -1,0 +1,85 @@
+--- intake.js.before
++++ intake.js
+@@ -3,7 +3,7 @@
+   const KEY = 'osnova.diagnostic-intake.v1';
+   // Enable only after approved document versions and a protected submission service are configured.
+   const legalDocumentsReady = true;
+-  const submissionReady = false;
++  const submissionReady = true;
+   const questions = [
+     {title:'Чем вы занимаетесь в настоящее время?',section:'Немного о вас',options:['Управляю собственным бизнесом / совладелец бизнеса','Занимаю руководящую должность','Являюсь сотрудником','Развиваю частную практику или собственные проекты','Занимаюсь семьёй, детьми и личными проектами','Сейчас не веду профессиональную деятельность']},
+     {title:'Сколько сотрудников работает в вашей компании?',section:'Немного о вас',options:['Работаю самостоятельно','2–10 человек','11–30 человек','31–100 человек','Более 100 человек','Не занимаюсь бизнесом / вопрос не применим']},
+@@ -13,6 +13,7 @@
+     {title:'Когда вы хотели бы начать работу над запросом?',section:'Следующий шаг',options:['В ближайшие 7 дней','В течение месяца','В следующие 1–3 месяца','Пока не планирую']},
+     {title:'Какой следующий шаг вы бы предпочли после диагностики?',section:'Следующий шаг',options:['Начать работу над изменением ситуации','Получить индивидуальный маршрут для последовательных изменений','Сначала изучить возможные способы решения','Пока только разобраться в причинах происходящего']}
+   ];
++  let submitting=false, submitted=false;
+   const empty = () => ({version:1,step:0,answers:questions.map(()=>[]),name:'',contact:'',consent:false});
+   let state=empty(), persistent=true, opener=null, resetPending=false;
+   try {
+@@ -48,6 +49,10 @@
+   dialog.setAttribute('aria-labelledby','intake-title');
+   dialog.innerHTML=`<div class="intake-layout"><aside class="intake-aside"><img class="intake-brand" src="assets/osnova-logo-hero.svg" alt="ОСНОВА" width="145" height="22"><h2 id="intake-title">Анкета для записи на <em>бесплатную первичную диагностику</em></h2><div class="intake-orbit" aria-hidden="true"><span></span></div><p class="intake-save" id="intake-save"></p></aside><div class="intake-main"><div class="intake-top"><p class="intake-kicker" id="intake-kicker"></p><button type="button" class="intake-close" aria-label="Закрыть анкету">×</button></div><div class="intake-progress-row"><span id="intake-counter"></span><span id="intake-percent"></span></div><div class="intake-progress" role="progressbar" aria-label="Прогресс заполнения анкеты" aria-valuemin="0" aria-valuemax="8"><span></span></div><form id="intake-form" class="intake-form" novalidate data-private data-clarity-mask="true" data-hj-suppress><div id="intake-content"></div><p class="intake-status" id="intake-status" role="status" aria-live="polite"></p><div class="intake-navigation"><button type="button" class="intake-back">← Назад</button><button type="submit" class="intake-next"></button></div></form><div class="intake-bottom"><span id="intake-draft-note"></span><button type="button" class="intake-reset">Очистить анкету</button></div><div class="intake-reset-confirm" hidden><span>Удалить все ответы?</span><button type="button" data-reset-confirm>Удалить</button><button type="button" data-reset-cancel>Отмена</button></div><div class="intake-legal-content" id="intake-legal-content" data-private data-clarity-mask="true" data-hj-suppress hidden></div></div></div>`;
+   document.body.append(dialog);
++  const honeypot=document.createElement('input');
++  honeypot.type='text';honeypot.name='website';honeypot.hidden=true;honeypot.tabIndex=-1;honeypot.autocomplete='off';
++  honeypot.setAttribute('data-osnova-honeypot','');
++  dialog.querySelector('form').append(honeypot);
+   const $=id=>dialog.querySelector('#'+id);
+   const status=$('intake-status');
+   function storageMessage(){
+@@ -62,6 +67,7 @@
+     progress.firstElementChild.style.width=`${count/8*100}%`;
+   }
+   function save(){
++    if(submitted)return;
+     const {consent,...draft}=state;
+     try{localStorage.setItem(KEY,JSON.stringify({...draft,updatedAt:Date.now()}));persistent=true;}
+     catch{persistent=false;}
+@@ -94,6 +100,8 @@
+     if(focus)$('intake-question').focus({preventScroll:true});
+   }
+   function open(trigger){
++    if(submitting)return;
++    if(submitted){submitted=false;state=empty();}
+     opener=trigger||document.activeElement;
+     state.consent=false;
+     document.getElementById('mobile-menu')?.close();
+@@ -130,7 +138,7 @@
+     feedback('');save();
+     updateProgress();
+   });
+-  dialog.querySelector('.intake-back').addEventListener('click',()=>{if(state.step>0){state.step--;save();render(true);}});
++  dialog.querySelector('.intake-back').addEventListener('click',()=>{if(submitting||submitted)return;if(state.step>0){state.step--;save();render(true);}});
+   dialog.querySelector('form').addEventListener('submit',event=>{
+     event.preventDefault();
+     if(state.step<7){
+@@ -148,12 +156,26 @@
+     const validContact=/^@?[a-z][a-z0-9_]{4,31}$/i.test(contact)||/^(?:https?:\/\/)?t\.me\/[a-z][a-z0-9_]{4,31}\/?$/i.test(contact)||(/^\+?[\d\s().-]+$/.test(contact)&&contact.replace(/\D/g,'').length>=7&&contact.replace(/\D/g,'').length<=15);
+     if(!validContact){$('intake-contact').setAttribute('aria-invalid','true');$('intake-contact').focus();feedback('Проверьте Telegram (@username) или номер телефона.');return;}
+     if(!state.consent){$('intake-consent').focus();feedback('Для отправки потребуется согласие на обработку персональных данных.');return;}
+-    save();feedback('Черновик заполнен. Отправка заявок ещё не подключена — данные никуда не отправлены. Для записи свяжитесь с нами в Telegram.',true);
++    if(submitting||submitted)return;
++    if(!window.OsnovaIntake){feedback('Не удалось подключиться к форме. Напишите нам в Telegram.',true);return;}
++    save();submitting=true;
++    const button=dialog.querySelector('.intake-next');
++    button.disabled=true;feedback('Отправляем…');
++    const data={answers:state.answers.map((a,i)=>({id:'q'+(i+1),index:a[0],text:questions[i].options[a[0]]})),name:state.name.trim(),contact,consent:true};
++    window.OsnovaIntake.submit(data).then(()=>{
++      submitted=true;state=empty();
++      try{localStorage.removeItem(KEY);}catch{}
++      $('intake-content').replaceChildren();$('intake-legal-content').replaceChildren();
++      dialog.querySelector('.intake-back').disabled=true;
++      button.textContent='Заявка отправлена';
++      feedback('Заявка отправлена. Мы свяжемся с вами в Telegram или по телефону.');
++    }).catch(()=>feedback('Не получилось отправить. Ответы сохранены — попробуйте ещё раз или напишите нам в Telegram.',true))
++      .finally(()=>{submitting=false;button.disabled=submitted;});
+   });
+   const resetConfirm=dialog.querySelector('.intake-reset-confirm');
+   dialog.querySelector('.intake-reset').addEventListener('click',()=>{resetPending=!resetPending;resetConfirm.hidden=!resetPending;});
+   dialog.querySelector('[data-reset-cancel]').addEventListener('click',()=>{resetPending=false;resetConfirm.hidden=true;});
+-  dialog.querySelector('[data-reset-confirm]').addEventListener('click',()=>{state=empty();resetPending=false;resetConfirm.hidden=true;try{localStorage.removeItem(KEY);}catch{}render(true);dialog.scrollTop=0;});
++  dialog.querySelector('[data-reset-confirm]').addEventListener('click',()=>{if(submitting)return;submitted=false;state=empty();resetPending=false;resetConfirm.hidden=true;try{localStorage.removeItem(KEY);}catch{}render(true);dialog.scrollTop=0;});
+   window.addEventListener('pagehide',save);
+   render();
+ })();

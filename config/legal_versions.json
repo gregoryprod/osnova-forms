@@ -1,0 +1,13 @@
+{
+  "captured_on": "2026-10-30",
+  "documents": {
+    "consent": {
+      "url": "https://osnova-mind.ru/consent.html",
+      "sha256": "601b7e59e3b67aac4e8a5ac7189a9667a79ee2eb0c25a76402642d2fa3dd808a"
+    },
+    "privacy": {
+      "url": "https://osnova-mind.ru/privacy.html",
+      "sha256": "0bd4909d43f103395607abc545b17150542ba9805c7157b379686523f1d1030c"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+production:
+  dispatch_pending:
+    class: DispatchPendingJob
+    schedule: every minute
+  purge_delivered:
+    class: PurgeSubmissionsJob
+    schedule: every day at 03:00
