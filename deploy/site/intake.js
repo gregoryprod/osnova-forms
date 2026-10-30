@@ -160,7 +160,7 @@
     if(!window.OsnovaIntake){feedback('Не удалось подключиться к форме. Напишите нам в Telegram.',true);return;}
     save();submitting=true;
     const button=dialog.querySelector('.intake-next');
-    button.disabled=true;feedback('Отправляем…');
+    button.disabled=true;dialog.querySelectorAll('input').forEach(el=>{el.disabled=true;});feedback('Отправляем…');
     const data={answers:state.answers.map((a,i)=>({id:'q'+(i+1),index:a[0],text:questions[i].options[a[0]]})),name:state.name.trim(),contact,consent:true};
     window.OsnovaIntake.submit(data).then(()=>{
       submitted=true;state=empty();
@@ -170,7 +170,7 @@
       button.textContent='Заявка отправлена';
       feedback('Заявка отправлена. Мы свяжемся с вами в Telegram или по телефону.');
     }).catch(()=>feedback('Не получилось отправить. Ответы сохранены — попробуйте ещё раз или напишите нам в Telegram.',true))
-      .finally(()=>{submitting=false;button.disabled=submitted;});
+      .finally(()=>{submitting=false;dialog.querySelectorAll('input').forEach(el=>{el.disabled=false;});button.disabled=submitted;});
   });
   const resetConfirm=dialog.querySelector('.intake-reset-confirm');
   dialog.querySelector('.intake-reset').addEventListener('click',()=>{resetPending=!resetPending;resetConfirm.hidden=!resetPending;});
