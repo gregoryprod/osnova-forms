@@ -24,7 +24,7 @@ class DeliverSubmissionJobTest < ActiveSupport::TestCase
   end
   test "401 keeps durable request and retries after recovery" do
     stub_request(:post, @url).to_return(status: 401)
-    assert_enqueued_with(job: AlertJob) { DeliverSubmissionJob.perform_now(@row.id) }
+    assert_no_enqueued_jobs { DeliverSubmissionJob.perform_now(@row.id) }
     assert_equal "pending", @row.reload.status
     assert_equal "amo_http_401", @row.last_error
     @row.update!(next_attempt_at: 1.second.ago)

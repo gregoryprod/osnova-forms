@@ -38,9 +38,6 @@ module Amo
       end
       (lines + ["Согласие: #{@data["received_at"]}", "Документы: #{@data["legal"].to_json}", "Страница: #{@data["page"]}", "UTM: #{@data["utm"].to_json}", "ID заявки: #{@submission.client_submission_id}"]).join("\n")
     end
-    def unknown_answers?
-      @data["answers"].any? { |a| !IntakeCatalog.questions.find { |q| q["id"] == a["id"] }["options"].include?(a["text"]) }
-    end
     private
     def field(id, value) = { "field_id" => id, "values" => [value] }
   end

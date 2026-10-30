@@ -13,19 +13,15 @@ class DeliverSubmissionJob < ApplicationJob
     end
     client.request(:post, "leads/#{row.amo_lead_id}/notes", [{ note_type: "common", params: { text: payload.summary } }])
     row.update!(status: "delivered", delivered_at: Time.current, lease_until: nil, last_error: nil)
-    AlertJob.perform_later(row.id, "unknown_answers") if payload.unknown_answers?
   rescue Amo::Client::Rejected => error
     # 5xx on POST can follow a successful write; reconcile rather than create duplicates.
     if error.code >= 500 && !row.amo_uid
       row.update!(status: "uncertain", last_error: error.message, lease_until: nil)
-      AlertJob.perform_later(row.id, "uncertain")
     else
       failed = row.attempts >= 20 || ![401, 403, 429, 500, 502, 503, 504].include?(error.code)
       row.update!(status: failed ? "failed" : "pending", last_error: error.message, next_attempt_at: [60 * (2 ** [row.attempts - 1, 6].min), 3600].min.seconds.from_now, lease_until: nil)
-      AlertJob.perform_later(row.id, error.code == 401 ? "token" : "delivery") if failed || error.code == 401 || row.attempts == 1
     end
   rescue Amo::Client::Ambiguous
     row.update!(status: row.amo_uid ? "pending" : "uncertain", next_attempt_at: 5.minutes.from_now, last_error: "amo_response_unknown", lease_until: nil)
-    AlertJob.perform_later(row.id, "uncertain")
   end
 end

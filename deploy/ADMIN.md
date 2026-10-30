@@ -31,7 +31,7 @@ SECRET_KEY_BASE и три ENCRYPTION_* — независимые случайн
 2. `certbot certonly --webroot -w /var/www/letsencrypt -d forms.osnova-mind.ru` (администратор использует свой контакт и принимает условия провайдера сертификата).
 3. Заменить только созданный vhost на forms.osnova-mind.ru.conf. `nginx -t && systemctl reload nginx`.
 4. Проверить HTTPS /up, /embed.js, certbot renew --dry-run, штатный timer и deploy-hook плавного reload nginx после обновления сертификата. Существующие сертификаты не перевыпускать.
-5. Если прямой доступ к api.telegram.org ограничен, задать ALERT_API_ROOT=https://<адрес-Worker> (без /bot<TOKEN>/sendMessage); ALERT_BOT_TOKEN и ALERT_CHAT_ID задать отдельно в env. Конечный слеш у базового адреса допустим. Настроить Telegram-бота и чат для ошибок и проверить уведомление с согласия владельца адресата. До этого форму не включать.
+5. Проверить `bin/rails submissions:status`: ошибки доставки доступны в last_error, заявки failed/uncertain разбираются администратором. Внешний канал уведомлений не требуется.
 
 ## Приёмка и сайт
 
@@ -48,3 +48,5 @@ SECRET_KEY_BASE и три ENCRYPTION_* — независимые случайн
 ## Разбор uncertain
 
 Посмотреть submissions:status. В CRM найти source_uid (полный client_submission_id) и сверить неразобранное/сделки за время отправки, включая уже принятые заявки. Если создано — записать подтверждённые amo_uid/amo_lead_id/amo_contact_id и вернуть pending для примечания. Если достоверно не создано — вернуть pending и next_attempt_at=nil. При сомнении не повторять создание автоматически. После исправления failed вернуть pending отдельно. Записывать только ID, не содержимое анкет, в журнал инцидента.
+
+При обновлении версии с уведомлениями переменные ALERT_* можно удалить из env. Если в Solid Queue остались задания класса AlertJob, удалить только их штатными средствами очереди; задания доставки анкет сохранять.
