@@ -9,11 +9,24 @@ class DeliverSubmissionJobTest < ActiveSupport::TestCase
     @created = { _embedded: { unsorted: [{ uid: "synthetic-uid", _embedded: { leads: [{id: 101}], contacts: [{id: 202}] } }] } }.to_json
   end
   teardown { ENV.delete("AMO_TOKEN") }
+  test "missing empty and whitespace referrer fall back to form page without changing original data" do
+    [nil, "", " \t"].each do |referrer|
+      data = @row.data.merge("referrer" => referrer)
+      @row.update!(payload: data.to_json)
+      assert_equal data["page"], Amo::LeadPayload.new(@row).to_h.dig("metadata", "referer")
+      assert_equal data, @row.data
+    end
+  end
+  test "nonempty referrer is preserved" do
+    referrer = "https://example.test/source"
+    @row.update!(payload: @row.data.merge("referrer" => referrer).to_json)
+    assert_equal referrer, Amo::LeadPayload.new(@row).to_h.dig("metadata", "referer")
+  end
   test "creates unsorted with correct enums then summary and is repeat-safe" do
     create = stub_request(:post, @url).with { |r|
       p = JSON.parse(r.body).first
       fields = p.dig("_embedded", "contacts", 0, "custom_fields_values")
-      p["pipeline_id"] == 11440118 && fields.any? { |f| f["field_id"] == 1704425 && f["values"][0]["enum_id"] == 1126919 }
+      p.dig("metadata", "referer") == @row.data["page"] && p["pipeline_id"] == 11440118 && fields.any? { |f| f["field_id"] == 1704425 && f["values"][0]["enum_id"] == 1126919 }
     }.to_return(status: 200, body: @created)
     note = stub_request(:post, "https://piwyjawik.amocrm.ru/api/v4/leads/101/notes").to_return(status: 200, body: "{}")
     2.times { DeliverSubmissionJob.perform_now(@row.id) }

@@ -27,7 +27,7 @@ module Amo
         "source_uid" => @submission.client_submission_id,
         "source_name" => "Анкета osnova-mind.ru",
         "pipeline_id" => 11440118,
-        "metadata" => { "form_id" => "osnova-intake", "form_name" => "Анкета диагностики", "form_page" => @data["page"], "ip" => @data["ip"], "form_sent_at" => Time.iso8601(@data["received_at"]).to_i, "referer" => @data["referrer"] },
+        "metadata" => { "form_id" => "osnova-intake", "form_name" => "Анкета диагностики", "form_page" => @data["page"], "ip" => @data["ip"], "form_sent_at" => Time.iso8601(@data["received_at"]).to_i, "referer" => (@data["referrer"].presence || @data.fetch("page")) },
         "_embedded" => { "leads" => [lead], "contacts" => [{ "name" => @data["name"], "custom_fields_values" => fields }] }
       }
     end
